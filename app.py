@@ -37,14 +37,13 @@ if uploaded_file is not None:
         clean_audio_path = None
         
         try:
-            # 1. ڈائریکٹ سرور کمانڈ کے ذریعے آٹو کنورٹر (یہ کبھی کریش نہیں ہوگا)
+            # 1. ڈائریکٹ سرور کمانڈ کے ذریعے آٹو کنورٹر 
             with st.spinner("1️⃣ سسٹم آپ کی فائل کو آٹو فکس کر کے MP3 بنا رہا ہے..."):
                 clean_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 clean_audio.close()
                 clean_audio_path = clean_audio.name
                 
                 try:
-                    # سرور کو براہ راست کمانڈ بھیجنا (یہ بہت فاسٹ ہے اور فائل سائز بھی کم کرے گا)
                     command = [
                         "ffmpeg", "-y", "-i", temp_media_path, 
                         "-vn", "-ar", "16000", "-ac", "1", "-b:a", "64k", 
@@ -55,7 +54,7 @@ if uploaded_file is not None:
                     st.error("❌ فائل کنورٹ نہیں ہو سکی۔ یہ فائل مکمل کرپٹ ہے۔")
                     st.stop()
 
-            # 2. اب صاف MP3 فائل گوگل کو بھیجیں گے
+            # 2. صاف MP3 فائل گوگل کو بھیجیں گے
             with st.spinner("2️⃣ صاف کی گئی فائل سرور پر اپلوڈ ہو رہی ہے..."):
                 gemini_media = genai.upload_file(path=clean_audio_path, mime_type="audio/mp3")
             
@@ -66,12 +65,29 @@ if uploaded_file is not None:
                     gemini_media = genai.get_file(gemini_media.name) 
                     
                 if gemini_media.state.name == 'FAILED':
-                    st.error("❌ گوگل AI نے اب بھی اس فائل کو ریجیکٹ کر دیا ہے۔")
+                    st.error("❌ گوگل AI نے اس فائل کو ریجیکٹ کر دیا ہے۔")
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
-            # 4. قانونی ہدایت
+            # 4. قانونی ہدایت اور آٹو ماڈل سلیکشن
             with st.spinner("4️⃣ سرور عدالتی فیصلہ ٹائپ کر رہا ہے..."):
+                
+                # 🔴 نیا سمارٹ ٹرک: دستیاب لیٹسٹ ماڈل خود تلاش کریں
+                target_model = "gemini-1.5-flash" # ڈیفالٹ بیک اپ
+                try:
+                    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    for m_name in available_models:
+                        if 'gemini-1.5-flash' in m_name:
+                            target_model = m_name
+                            break
+                        elif 'gemini-1.5-pro' in m_name:
+                            target_model = m_name
+                except Exception as e:
+                    pass # اگر تلاش میں مسئلہ ہو تو ڈیفالٹ پر چلنے دیں
+                
+                # ماڈل کو ایکٹیو کرنا
+                model = genai.GenerativeModel(target_model)
+                
                 prompt = """
                 You are an expert Legal Assistant and Stenographer in a Pakistani Court.
                 Listen to this audio dictation carefully.
@@ -82,10 +98,9 @@ if uploaded_file is not None:
                 Output ONLY the clean English legal text, nothing else.
                 """
                 
-                model = genai.GenerativeModel('gemini-1.5-flash')
                 response = model.generate_content([prompt, gemini_media])
                 
-                st.success("✅ ڈکٹیشن کامیابی سے تیار ہو گئی!")
+                st.success(f"✅ ڈکٹیشن کامیابی سے تیار ہو گئی!")
                 st.write(response.text)
                 
                 # 5. Word Document بنانا
