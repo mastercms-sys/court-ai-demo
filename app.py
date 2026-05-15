@@ -11,7 +11,7 @@ st.title("⚖️ Auto Court Dictation Pro")
 st.write("اپنی ڈکٹیشن آڈیو اپلوڈ کریں اور پروفیشنل Word فائل حاصل کریں۔ (Zero Storage Policy: آپ کا ڈیٹا کہیں محفوظ نہیں ہوتا)")
 
 # یوزر سے API Key لینا (ڈیمو کے لیے)
-API_KEY = st.text_input("اپنی Gemini API Key یہاں پیسٹ کریں:", type="password")
+API_KEY = st.text_input("AIzaSyBpaRwNc9mgzes0fwWIf1gzne22dR9WCf8", type="password")
 
 if API_KEY:
     genai.configure(api_key=API_KEY)
