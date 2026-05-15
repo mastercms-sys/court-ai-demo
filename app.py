@@ -10,7 +10,7 @@ import subprocess
 # پیج کی سیٹنگ
 st.set_page_config(page_title="Court Dictation AI", page_icon="⚖️", layout="centered")
 st.title("⚖️ Auto Court Dictation Pro")
-st.write("اپنی ڈکٹیشن کی آڈیو یا ویڈیو فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے Word فائل بنا دے گا۔")
+st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے Word فائل بنا دے گا۔")
 
 # API Key کو خفیہ خانے سے لانا
 try:
@@ -20,17 +20,8 @@ except Exception as e:
     st.error("⚠️ ایپ کے بیک اینڈ پر API Key موجود نہیں ہے۔")
     st.stop()
 
-# یوزر کے لیے 2 آپشنز کا بٹن (ریڈیو بٹن)
-st.markdown("### ⚙️ ڈکٹیشن کا انداز منتخب کریں:")
-processing_mode = st.radio(
-    "",
-    ["1️⃣ بالکل اصل الفاظ (Original Text - صرف گرامر اور سپیلنگ درست کرے گا)", 
-     "2️⃣ بہتر قانونی مسودہ (Improved Text - پیراگراف اور ہیڈنگز کے ساتھ فارمیٹ کرے گا)"]
-)
-
 allowed_formats = ["mp3", "wav", "m4a", "mp4", "mov", "avi", "mkv", "aac", "ogg"]
-st.markdown("### 📁 فائل اپلوڈ کریں:")
-uploaded_file = st.file_uploader("", type=allowed_formats)
+uploaded_file = st.file_uploader("فائل اپلوڈ کریں", type=allowed_formats)
 
 if uploaded_file is not None:
     if st.button("Generate Court Document"):
@@ -111,34 +102,26 @@ if uploaded_file is not None:
                 
                 model = genai.GenerativeModel(target_model)
                 
-                # 🔴 یوزر کی پسند کے مطابق AI کو سخت ہدایات (Prompts) دینا
-                if "Original Text" in processing_mode:
-                    prompt = """
-                    You are an expert Stenographer. Listen to this audio dictation carefully.
-                    Transcribe the text EXACTLY as dictated, keeping the original sentence structure and wording.
-                    Only correct spelling mistakes and basic grammar. Remove hesitations like 'umm' or 'yar'.
-                    
-                    IMPORTANT STRICT RULES:
-                    1. DO NOT add "In the Court of" or any court names at the top.
-                    2. DO NOT add any signature lines, stamps, judge's name, or dates at the bottom.
-                    3. Do not rephrase sentences or add extra legal formatting unless it was spoken in the audio.
-                    
-                    Output ONLY the transcribed clean English text.
-                    """
-                else:
-                    prompt = """
-                    You are an expert Legal Assistant and Stenographer in a Pakistani Court.
-                    Listen to this audio dictation carefully.
-                    Remove all hesitations, 'umm', 'yar', and informal words.
-                    Correct the English grammar perfectly and format the text into a professional Court Order or Judgment.
-                    Use proper paragraphs and format legal headings (like Plaintiff, Defendant, Issues, OPP, OPD, Relief) properly if they are in the audio.
-                    
-                    IMPORTANT STRICT RULES:
-                    1. DO NOT add "In the Court of" or any court headings at the top unless explicitly dictated in the audio.
-                    2. DO NOT add any signature lines, stamps, judge's name, or dates at the bottom unless explicitly dictated in the audio.
-                    
-                    Output ONLY the clean English legal text, nothing else.
-                    """
+                # 🔴 آپ کا دیا گیا بہترین اور پروفیشنل پرامپٹ (تھوڑی سی موڈیفکیشن کے ساتھ)
+                prompt = """Act as an Expert Legal Assistant and Senior Court Stenographer in a Pakistani District and Sessions Court.
+
+I will provide you with an audio dictation of court proceedings. Your task is to process, edit, and format this audio into a flawless, highly professional Court Order or Judgment.
+
+Please strictly follow these instructions:
+
+1. CLEAN UP THE TEXT: Remove all hesitations, stutters, false starts, filler sounds (e.g., 'umm', 'uh'), and informal conversational words (e.g., 'yar', 'acha', 'theek').
+2. PERFECT GRAMMAR & TONE: Correct all English grammar, sentence structures, and punctuation perfectly. Maintain a highly formal, objective, and judicial tone.
+3. PRESERVE PAKISTANI LEGAL CONTEXT: Retain, correctly spell, and properly capitalize Pakistani legal and local terms (e.g., FIR, PPC, CrPC, IO, SHO, ADPP, Plaint, Nikahnama, Iddat, Panchayat, OPP, OPD, PW, DW). DO NOT change any core facts, dates, names, or amounts.
+4. PROFESSIONAL FORMATTING:
+   - Separate multiple cases clearly.
+   - Use proper paragraph breaks for readability.
+   - Use BOLD and ALL CAPS for main headings (e.g., **ORDER**, **JUDGMENT**).
+   - For criminal cases, neatly format the header (e.g., **TITLE:**, **FIR NO.:**, **OFFENCES:**, **POLICE STATION:**).
+   - For civil/family cases, boldly format the issues (e.g., **ISSUE NO. 1 (OPP):**, **ISSUE NO. 2 (OPD):**).
+5. STRICT OUTPUT CONSTRAINT: Output ONLY the final, clean, formatted English legal document. Do not include any conversational AI filler, greetings, introductory remarks, or concluding statements (e.g., never say "Here is the formatted document").
+6. NO EXTRA HEADERS/FOOTERS: DO NOT add "In the Court of", Judge names, Dates, Signatures, or Stamps at the top or bottom UNLESS explicitly spoken in the audio dictation.
+
+Here is the audio file for you to process:"""
                 
                 response = model.generate_content([prompt, gemini_media])
                 
@@ -164,6 +147,8 @@ if uploaded_file is not None:
             
         except Exception as e:
             st.error(f"کوئی مسئلہ پیش آیا: {e}")
+            with st.expander("تکنیکی خرابی کی تفصیل (ایرر آئے تو یہ دیکھیں)"):
+                st.write(e)
             
         finally:
             # زیرو سٹوریج: اپنے لوکل سرور سے دونوں عارضی فائلیں ڈیلیٹ کرنا
