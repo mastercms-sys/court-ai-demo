@@ -4,18 +4,19 @@ from docx import Document
 import io
 import tempfile
 import os
+import time
 
 # پیج کی سیٹنگ
 st.set_page_config(page_title="Court Dictation AI", page_icon="⚖️", layout="centered")
 st.title("⚖️ Auto Court Dictation Pro")
 st.write("اپنی ڈکٹیشن آڈیو اپلوڈ کریں اور پروفیشنل Word فائل حاصل کریں۔ (Zero Storage Policy: آپ کا ڈیٹا کہیں محفوظ نہیں ہوتا)")
 
-# 1. پروفیشنل طریقہ: API Key کو خفیہ خانے (Streamlit Secrets) سے خود بخود لانا
+# 1. API Key کو خفیہ خانے (Streamlit Secrets) سے لانا
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
 except Exception as e:
-    st.error("⚠️ ایپ کے بیک اینڈ پر API Key موجود نہیں ہے۔ براہ کرم ایڈمن سے رابطہ کریں یا Streamlit Secrets میں Key سیٹ کریں۔")
+    st.error("⚠️ ایپ کے بیک اینڈ پر API Key موجود نہیں ہے۔ براہ کرم Streamlit Secrets میں Key سیٹ کریں۔")
     st.stop()
 
 # 2. آڈیو فائل اپلوڈ کرنے کا آپشن
@@ -23,18 +24,28 @@ uploaded_file = st.file_uploader("آڈیو فائل اپلوڈ کریں (MP3, WA
 
 if uploaded_file is not None:
     if st.button("Generate Court Document"):
-        st.info("فائل پراسیس ہو رہی ہے، براہ کرم 1 یا 2 منٹ انتظار کریں...")
+        st.info("فائل پراسیس ہو رہی ہے، آڈیو کے سائز کے حساب سے 1 سے 2 منٹ لگ سکتے ہیں...")
         
-        # آڈیو کو صرف کمپیوٹر کی عارضی میموری (RAM) میں رکھنا
+        # آڈیو کو صرف کمپیوٹر کی عارضی میموری میں رکھنا
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
             temp_audio.write(uploaded_file.read())
             temp_audio_path = temp_audio.name
             
         try:
-            # آڈیو براہ راست AI کو بھیجنا
+            # 3. آڈیو براہ راست AI کے سرور کو بھیجنا
             gemini_audio = genai.upload_file(path=temp_audio_path)
             
-            # AI کو سخت ہدایت
+            # 4. لازمی حصہ: آڈیو کے تیار ہونے کا انتظار کرنا (ورنہ کریش ہو جائے گا)
+            with st.spinner("AI سرور آڈیو کو سمجھ رہا ہے، براہِ کرم انتظار کریں..."):
+                while gemini_audio.state.name == 'PROCESSING':
+                    time.sleep(3) # 3 سیکنڈ انتظار کریں
+                    gemini_audio = genai.get_file(gemini_audio.name) # دوبارہ چیک کریں
+                    
+                if gemini_audio.state.name == 'FAILED':
+                    st.error("آڈیو پراسیسنگ میں کوئی مسئلہ آیا ہے۔ براہ کرم کوئی اور فائل ٹرائی کریں۔")
+                    st.stop()
+            
+            # 5. AI کو سخت ہدایت
             prompt = """
             You are an expert Legal Assistant and Stenographer in a Pakistani Court.
             Listen to this audio dictation carefully.
@@ -45,6 +56,7 @@ if uploaded_file is not None:
             Output ONLY the clean English legal text, nothing else.
             """
             
+            # ماڈل کی سیٹنگ
             model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content([prompt, gemini_audio])
             
@@ -53,7 +65,7 @@ if uploaded_file is not None:
             st.success("ڈکٹیشن کامیابی سے تیار ہو گئی!")
             st.write(generated_text)
             
-            # Word Document (.docx) بنانا (ہارڈ ڈسک میں سیو کیے بغیر)
+            # 6. Word Document (.docx) بنانا
             doc = Document()
             doc.add_paragraph(generated_text)
             
@@ -68,13 +80,13 @@ if uploaded_file is not None:
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
             
-            # زیرو سٹوریج: گوگل سرور سے فائل فوراً ڈیلیٹ کرنا
+            # 7. زیرو سٹوریج: گوگل سرور سے آڈیو فائل فوراً ڈیلیٹ کرنا
             genai.delete_file(gemini_audio.name)
             
         except Exception as e:
             st.error(f"کوئی مسئلہ پیش آیا: {e}")
             
         finally:
-            # زیرو سٹوریج: اپنے لوکل سرور سے بھی آڈیو ڈیلیٹ کرنا
+            # 8. زیرو سٹوریج: اپنے لوکل سرور سے بھی آڈیو ڈیلیٹ کرنا
             if os.path.exists(temp_audio_path):
                 os.remove(temp_audio_path)
