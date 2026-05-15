@@ -12,7 +12,7 @@ st.set_page_config(page_title="Court Dictation AI", page_icon="⚖️", layout="
 st.title("⚖️ Auto Court Dictation Pro")
 st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے Word فائل بنا دے گا۔")
 
-# API Key
+# API Key کو خفیہ خانے (Streamlit Secrets) سے لانا
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
@@ -20,6 +20,7 @@ except Exception as e:
     st.error("⚠️ ایپ کے بیک اینڈ پر API Key موجود نہیں ہے۔")
     st.stop()
 
+# ہر قسم کی آڈیو/ویڈیو فائل اپلوڈ کرنے کا آپشن
 allowed_formats = ["mp3", "wav", "m4a", "mp4", "mov", "avi", "mkv", "aac", "ogg"]
 uploaded_file = st.file_uploader("فائل اپلوڈ کریں", type=allowed_formats)
 
@@ -37,24 +38,22 @@ if uploaded_file is not None:
         clean_audio_path = None
         
         try:
-            # 1. ہمارا آٹو کنورٹر (خراب آڈیو/ویڈیو کو صاف ستھری MP3 میں بدلنا)
+            # 1. آٹو کنورٹر (خراب آڈیو/ویڈیو کو صاف ستھری MP3 میں بدلنا)
             with st.spinner("1️⃣ سسٹم آپ کی فائل کو آٹو فکس کر کے MP3 بنا رہا ہے..."):
                 try:
                     audio = AudioSegment.from_file(temp_media_path)
                     
-                    # نئی ایم پی تھری فائل بنانا
                     clean_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                     clean_audio.close()
                     clean_audio_path = clean_audio.name
                     
                     audio.export(clean_audio_path, format="mp3")
                 except Exception as e:
-                    st.error(f"❌ آپ کی فائل انتہائی کرپٹ ہے جسے سسٹم بھی ٹھیک نہیں کر سکا۔ ایرر: {e}")
+                    st.error(f"❌ آپ کی فائل کنورٹ نہیں ہو سکی۔ ایرر: {e}")
                     st.stop()
 
             # 2. اب صاف MP3 فائل گوگل کو بھیجیں گے
             with st.spinner("2️⃣ صاف کی گئی فائل سرور پر اپلوڈ ہو رہی ہے..."):
-                # mime_type="audio/mp3" لکھنا ضروری ہے تاکہ گوگل اسے ویڈیو نہ سمجھے
                 gemini_media = genai.upload_file(path=clean_audio_path, mime_type="audio/mp3")
             
             # 3. پکا انتظار
@@ -64,8 +63,7 @@ if uploaded_file is not None:
                     gemini_media = genai.get_file(gemini_media.name) 
                     
                 if gemini_media.state.name == 'FAILED':
-                    # اگر پھر بھی فیل ہو تو ہم اصلی ایرر سکرین پر دکھائیں گے
-                    st.error(f"❌ گوگل AI نے اب بھی اس فائل کو ریجیکٹ کر دیا ہے۔ ایرر: {gemini_media.error.message if gemini_media.error else 'Unknown Error'}")
+                    st.error(f"❌ گوگل AI نے اب بھی اس فائل کو ریجیکٹ کر دیا ہے۔ ایرر: {gemini_media.error.message if hasattr(gemini_media, 'error') else 'Unknown Error'}")
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
@@ -108,7 +106,7 @@ if uploaded_file is not None:
             st.error(f"کوئی مسئلہ پیش آیا: {e}")
             
         finally:
-            # اپنے لوکل سرور سے دونوں عارضی فائلیں ڈیلیٹ کرنا (Zero Storage)
+            # زیرو سٹوریج: اپنے لوکل سرور سے دونوں عارضی فائلیں ڈیلیٹ کرنا
             if os.path.exists(temp_media_path):
                 os.remove(temp_media_path)
             if clean_audio_path and os.path.exists(clean_audio_path):
