@@ -10,7 +10,7 @@ import subprocess
 # پیج کی سیٹنگ
 st.set_page_config(page_title="Court Dictation AI", page_icon="⚖️", layout="centered")
 st.title("⚖️ Auto Court Dictation Pro")
-st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے Word فائل بنا دے گا۔")
+st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے  فائل بنا دے گا۔")
 
 # API Key کو خفیہ خانے سے لانا
 try:
