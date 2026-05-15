@@ -5,23 +5,14 @@ import io
 import tempfile
 import os
 import time
-import sys
-
-# پائتھن کے نئے ورژن کا مسئلہ حل کرنے کے لیے سمارٹ ٹرک (اس سے ایرر ختم ہو جائے گا)
-try:
-    import audioop
-except ImportError:
-    import pyaudioop as audioop
-    sys.modules['audioop'] = audioop
-
-from pydub import AudioSegment
+import subprocess
 
 # پیج کی سیٹنگ
 st.set_page_config(page_title="Court Dictation AI", page_icon="⚖️", layout="centered")
 st.title("⚖️ Auto Court Dictation Pro")
 st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے Word فائل بنا دے گا۔")
 
-# API Key کو خفیہ خانے (Streamlit Secrets) سے لانا
+# API Key کو خفیہ خانے سے لانا
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
@@ -29,7 +20,6 @@ except Exception as e:
     st.error("⚠️ ایپ کے بیک اینڈ پر API Key موجود نہیں ہے۔")
     st.stop()
 
-# ہر قسم کی آڈیو/ویڈیو فائل اپلوڈ کرنے کا آپشن
 allowed_formats = ["mp3", "wav", "m4a", "mp4", "mov", "avi", "mkv", "aac", "ogg"]
 uploaded_file = st.file_uploader("فائل اپلوڈ کریں", type=allowed_formats)
 
@@ -47,18 +37,22 @@ if uploaded_file is not None:
         clean_audio_path = None
         
         try:
-            # 1. آٹو کنورٹر (خراب آڈیو/ویڈیو کو صاف ستھری MP3 میں بدلنا)
+            # 1. ڈائریکٹ سرور کمانڈ کے ذریعے آٹو کنورٹر (یہ کبھی کریش نہیں ہوگا)
             with st.spinner("1️⃣ سسٹم آپ کی فائل کو آٹو فکس کر کے MP3 بنا رہا ہے..."):
+                clean_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+                clean_audio.close()
+                clean_audio_path = clean_audio.name
+                
                 try:
-                    audio = AudioSegment.from_file(temp_media_path)
-                    
-                    clean_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-                    clean_audio.close()
-                    clean_audio_path = clean_audio.name
-                    
-                    audio.export(clean_audio_path, format="mp3")
-                except Exception as e:
-                    st.error(f"❌ آپ کی فائل کنورٹ نہیں ہو سکی۔ ایرر: {e}")
+                    # سرور کو براہ راست کمانڈ بھیجنا (یہ بہت فاسٹ ہے اور فائل سائز بھی کم کرے گا)
+                    command = [
+                        "ffmpeg", "-y", "-i", temp_media_path, 
+                        "-vn", "-ar", "16000", "-ac", "1", "-b:a", "64k", 
+                        clean_audio_path
+                    ]
+                    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except subprocess.CalledProcessError:
+                    st.error("❌ فائل کنورٹ نہیں ہو سکی۔ یہ فائل مکمل کرپٹ ہے۔")
                     st.stop()
 
             # 2. اب صاف MP3 فائل گوگل کو بھیجیں گے
@@ -72,7 +66,7 @@ if uploaded_file is not None:
                     gemini_media = genai.get_file(gemini_media.name) 
                     
                 if gemini_media.state.name == 'FAILED':
-                    st.error(f"❌ گوگل AI نے اب بھی اس فائل کو ریجیکٹ کر دیا ہے۔ ایرر: {gemini_media.error.message if hasattr(gemini_media, 'error') else 'Unknown Error'}")
+                    st.error("❌ گوگل AI نے اب بھی اس فائل کو ریجیکٹ کر دیا ہے۔")
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
