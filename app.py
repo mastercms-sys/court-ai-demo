@@ -69,23 +69,45 @@ if uploaded_file is not None:
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
-            # 4. قانونی ہدایت اور آٹو ماڈل سلیکشن
-            with st.spinner("4️⃣ سرور عدالتی فیصلہ ٹائپ کر رہا ہے..."):
+            # 4. قانونی ہدایت اور آٹو ماڈل سلیکشن (Smart Scanner)
+            with st.spinner("4️⃣ سرور عدالتی فیصلہ ٹائپ کر رہا ہے... (ماڈل تلاش کیا جا رہا ہے)"):
                 
-                # 🔴 نیا سمارٹ ٹرک: دستیاب لیٹسٹ ماڈل خود تلاش کریں
-                target_model = "gemini-1.5-flash" # ڈیفالٹ بیک اپ
+                target_model = None
+                available_models = []
+                
+                # سرور سے ان تمام ماڈلز کی لسٹ منگوانا جو آپ کی API Key پر چل سکتے ہیں
                 try:
-                    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            available_models.append(m.name)
+                except Exception:
+                    pass
+                        
+                # سب سے پہلے لیٹسٹ Flash ماڈل تلاش کریں
+                for m_name in available_models:
+                    if '1.5-flash' in m_name:
+                        target_model = m_name
+                        break
+                        
+                # اگر Flash نہ ملے تو Pro ماڈل تلاش کریں
+                if not target_model:
                     for m_name in available_models:
-                        if 'gemini-1.5-flash' in m_name:
+                        if '1.5-pro' in m_name:
                             target_model = m_name
                             break
-                        elif 'gemini-1.5-pro' in m_name:
-                            target_model = m_name
-                except Exception as e:
-                    pass # اگر تلاش میں مسئلہ ہو تو ڈیفالٹ پر چلنے دیں
+                            
+                # اگر کچھ بھی نہ ملے تو جو بھی پہلا ماڈل ہو وہ اٹھا لیں
+                if not target_model and available_models:
+                    target_model = available_models[0]
+                    
+                if not target_model:
+                    st.error("❌ آپ کی API Key پر کوئی بھی AI ماڈل دستیاب نہیں ہے۔")
+                    st.stop()
                 
-                # ماڈل کو ایکٹیو کرنا
+                # سکرین پر دکھائیں کہ کون سا ماڈل خودکار طور پر منتخب ہوا ہے
+                st.info(f"💡 سمارٹ سسٹم استعمال کر رہا ہے: **{target_model}**")
+                
+                # منتخب شدہ درست ماڈل کو چلانا
                 model = genai.GenerativeModel(target_model)
                 
                 prompt = """
@@ -100,7 +122,7 @@ if uploaded_file is not None:
                 
                 response = model.generate_content([prompt, gemini_media])
                 
-                st.success(f"✅ ڈکٹیشن کامیابی سے تیار ہو گئی!")
+                st.success("✅ ڈکٹیشن کامیابی سے تیار ہو گئی!")
                 st.write(response.text)
                 
                 # 5. Word Document بنانا
@@ -122,6 +144,10 @@ if uploaded_file is not None:
             
         except Exception as e:
             st.error(f"کوئی مسئلہ پیش آیا: {e}")
+            with st.expander("تکنیکی خرابی کی تفصیل (ایرر آئے تو یہ دیکھیں)"):
+                st.write(e)
+                if 'available_models' in locals():
+                    st.write("آپ کی API Key پر موجود ماڈلز کی لسٹ:", available_models)
             
         finally:
             # زیرو سٹوریج: اپنے لوکل سرور سے دونوں عارضی فائلیں ڈیلیٹ کرنا
