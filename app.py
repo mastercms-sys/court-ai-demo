@@ -5,6 +5,15 @@ import io
 import tempfile
 import os
 import time
+import sys
+
+# پائتھن کے نئے ورژن کا مسئلہ حل کرنے کے لیے سمارٹ ٹرک (اس سے ایرر ختم ہو جائے گا)
+try:
+    import audioop
+except ImportError:
+    import pyaudioop as audioop
+    sys.modules['audioop'] = audioop
+
 from pydub import AudioSegment
 
 # پیج کی سیٹنگ
