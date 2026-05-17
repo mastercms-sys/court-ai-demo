@@ -8,7 +8,7 @@ import time
 import subprocess
 
 # پیج کی سیٹنگ
-st.set_page_config(page_title="Court Dictation AI - Deep Think", page_icon="⚖️", layout="centered")
+st.set_page_config(page_title="Court Dictation AI - Elite Drafter", page_icon="⚖️", layout="centered")
 
 # ==========================================
 # 🔒 لاگ ان سسٹم (Monthly Subscription Lock)
@@ -37,7 +37,7 @@ if not st.session_state.logged_in:
 # ==========================================
 
 st.title("⚖️ Auto Court Dictation Pro")
-st.markdown("**(🧠 Deep Think Enabled with Auto-Backup)**")
+st.markdown("**(🧠 Deep Legal Thinker & Elite Drafter Enabled)**")
 st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم گہرائی سے سوچ کر Word فائل بنا دے گا۔")
 
 # API Key
@@ -92,73 +92,105 @@ if uploaded_file is not None:
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
-            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور بہترین ماڈل تلاش کر کے فیصلہ ٹائپ کر رہا ہے..."):
+            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور قانونی گہرائی کے ساتھ فیصلہ ڈرافٹ کر رہا ہے..."):
                 
                 valid_models = []
                 try:
                     for m in genai.list_models():
                         if 'generateContent' in m.supported_generation_methods:
                             name_lower = m.name.lower()
-                            # 🔴 سمارٹ فلٹر: Image، Vision اور Experimental زیرو کوٹہ ماڈلز کو نکال دیں
                             if 'image' not in name_lower and 'vision' not in name_lower and 'exp' not in name_lower and 'learn' not in name_lower:
                                 valid_models.append(m.name)
                 except Exception as e:
                     pass
                 
-                # Pro اور Flash ماڈلز کو الگ الگ ترتیب دینا
                 pro_models = sorted([m for m in valid_models if 'pro' in m.lower()], reverse=True)
                 flash_models = sorted([m for m in valid_models if 'flash' in m.lower()], reverse=True)
                 
-                # مین سرور (Pro) اور بیک اپ سرور (Flash) کا انتخاب
                 primary_model_name = pro_models[0] if pro_models else (flash_models[0] if flash_models else "gemini-1.5-pro")
                 backup_model_name = flash_models[0] if flash_models else "gemini-1.5-flash"
                 
-                prompt = """Act as an Expert Legal Assistant and Senior Court Stenographer in a Pakistani District and Sessions Court.
+                # 🔴 آپ کا الٹرا لیول پرامپٹ (Deep Legal Thinking)
+                prompt = """Act as an Elite Legal Drafter and Senior District & Sessions Judge in Pakistan. 
 
-I will provide you with an audio dictation of court proceedings. Your task is to process, edit, and format this audio into a flawless, highly professional Court Order or Judgment.
+I will provide you with a raw, unedited audio recording of court dictations. Your task is to apply "Deep Legal Thinking" to listen, process, refine, logically correct, and highly format this audio into a flawless, ready-to-print Court Order or Judgment.
 
-Please strictly follow these instructions:
+You MUST strictly adhere to the following 5 golden rules:
 
-1. CLEAN UP THE TEXT: Remove all hesitations, stutters, false starts, filler sounds (e.g., 'umm', 'uh'), and informal conversational words (e.g., 'yar', 'acha', 'theek').
-2. PERFECT GRAMMAR & TONE: Correct all English grammar, sentence structures, and punctuation perfectly. Maintain a highly formal, objective, and judicial tone.
-3. PRESERVE PAKISTANI LEGAL CONTEXT: Retain, correctly spell, and properly capitalize Pakistani legal and local terms (e.g., FIR, PPC, CrPC, IO, SHO, ADPP, Plaint, Nikahnama, Iddat, Panchayat, OPP, OPD, PW, DW). DO NOT change any core facts, dates, names, or amounts.
-4. PROFESSIONAL FORMATTING:
-   - Separate multiple cases clearly.
-   - Use proper paragraph breaks for readability.
-   - Use BOLD and ALL CAPS for main headings (e.g., **ORDER**, **JUDGMENT**).
-   - For criminal cases, neatly format the header (e.g., **TITLE:**, **FIR NO.:**, **OFFENCES:**, **POLICE STATION:**).
-   - For civil/family cases, boldly format the issues (e.g., **ISSUE NO. 1 (OPP):**, **ISSUE NO. 2 (OPD):**).
-5. STRICT OUTPUT CONSTRAINT: Output ONLY the final, clean, formatted English legal document. Do not include any conversational AI filler, greetings, introductory remarks, or concluding statements.
-6. NO EXTRA HEADERS/FOOTERS: DO NOT add "In the Court of", Judge names, Dates, Signatures, or Stamps at the top or bottom UNLESS explicitly spoken in the audio dictation.
+1. NO MARKDOWN OR SPECIAL CHARACTERS (CRITICAL FOR MS WORD):
+   - ABSOLUTELY DO NOT use asterisks (**), hashes (#), or quotation marks ("") for bolding or formatting. 
+   - Since the output will be pasted directly into MS Word as plain text, use purely ALL CAPS to emphasize headings. 
+   - Example: Write exactly ORDER instead of "**ORDER**" or "ORDER". Write exactly ISSUE NO. 1 (OPP): instead of "**ISSUE NO. 1 (OPP):**".
 
-Here is the audio file for you to process:"""
+2. LOGICAL CORRECTIONS & ELIMINATING REPETITIONS (DEEP THINK):
+   - Think deeply and analyze the context. Correct obvious slips of the tongue by the dictator. (e.g., if the audio says "sons are Parda Nashin ladies", apply logic and correct it to "daughters are Parda Nashin ladies" based on context).
+   - If the dictator accidentally repeats a sentence twice (e.g., "The defendants are co-sharers. The defendants are co-sharers."), deeply analyze and write it ONLY ONCE in the final text.
+   - Ensure the gender of the parties (he/she/her/his) and singular/plural nouns remain logically consistent throughout the case.
+
+3. PERFECT LEGAL GRAMMAR & FLOW:
+   - Fix literal Urdu-to-English translation errors. ALWAYS change "interfere into the possession" to "interfere with the possession".
+   - ALWAYS change "deprived from" to "deprived of".
+   - Always use proper articles (e.g., write "The plaintiff" instead of just "Plaintiff").
+   - Remove the repetitive word "That" at the start of every sentence. Merge choppy sentences to create a smooth, highly formal, and objective judicial tone.
+
+4. EXACT NUMBERS & ISSUE FORMATTING:
+   - Convert spoken amounts into legal numeric formats with commas and a dash. Do not write "Rupees 50 Lakh" or "50000". Write: "Rs. 5,000,000/-" and "Rs. 50,000/-".
+   - Do NOT repeat the burden of proof tag at the end of an issue. If the heading says "ISSUE NO. 1 (OPP):", do not put "(OPP)" again at the end of the sentence.
+
+5. EXACT LAYOUT STRUCTURE:
+   - Separate different cases using a plain line of dashes: ----------------------------------------
+   - Format each case exactly like this:
+   
+   CASE NO. [Leave Blank if not provided]
+   TITLE: [Party A] VS. [Party B]
+   
+   ORDER 
+   [Clean, logically flowing paragraphs]
+   
+   ISSUES:
+   ISSUE NO. 1 (OPP): [Text ends with a question mark]
+   ISSUE NO. 2 (OPD): [Text ends with a question mark]
+   
+   RELIEF: 
+   To come up for preliminary arguments on [Date].
+
+STRICT OUTPUT CONSTRAINT:
+Output ONLY the final, cleanly formatted legal document. No introductory or concluding remarks from the AI. Do not output your internal thinking process.
+
+Here is the audio file to process:"""
                 
-                # 🔴 ڈبل انجن سسٹم (آٹو بیک اپ لاجک)
                 try:
-                    st.info(f"💡 مین سرور استعمال ہو رہا ہے: **{primary_model_name}**")
+                    st.info(f"💡 Elite Drafter Engine: **{primary_model_name}**")
                     primary_model = genai.GenerativeModel(primary_model_name)
                     response = primary_model.generate_content([prompt, gemini_media])
-                    st.success("✅ ڈکٹیشن 100% درستگی (Deep Think) کے ساتھ تیار ہو گئی!")
+                    st.success("✅ ڈکٹیشن 100% درستگی (Deep Legal Think) کے ساتھ تیار ہو گئی!")
                     
                 except Exception as model_error:
                     error_msg = str(model_error)
-                    # اگر گوگل کوٹہ یا لمٹ کا ایرر دے تو فوراً بیک اپ سرور چلا دو
                     if ("429" in error_msg or "Quota" in error_msg or "ResourceExhausted" in error_msg) and backup_model_name != primary_model_name:
-                        st.warning(f"⚠️ مین سرور بزی ہے یا فری لمٹ ختم ہے۔ آٹو بیک اپ سرور (**{backup_model_name}**) استعمال کیا جا رہا ہے تاکہ آپ کا کام نہ رکے...")
+                        st.warning(f"⚠️ مین سرور بزی ہے، آٹو بیک اپ سرور (**{backup_model_name}**) استعمال کیا جا رہا ہے...")
                         try:
                             backup_model = genai.GenerativeModel(backup_model_name)
                             response = backup_model.generate_content([prompt, gemini_media])
                             st.success("✅ ڈکٹیشن بیک اپ ماڈل کے ساتھ کامیابی سے تیار ہو گئی!")
                         except Exception as backup_error:
-                            raise backup_error # اگر بیک اپ بھی فیل ہو جائے تب ایرر دے گا
+                            raise backup_error
                     else:
-                        raise model_error # اگر کوئی اور ایرر ہو تو شو کرے گا
+                        raise model_error
                 
-                st.write(response.text)
+                # نیا طریقہ: سکرین پر دکھانے کے لیے Text Area کا استعمال، تاکہ مارک ڈاؤن کا مسئلہ نہ ہو اور یوزر آسانی سے کاپی کر سکے
+                st.text_area("تیار شدہ عدالتی فیصلہ (یہاں سے سلیکٹ کر کے کاپی بھی کر سکتے ہیں):", response.text, height=450)
                 
                 # 5. Word Document بنانا
                 doc = Document()
-                doc.add_paragraph(response.text)
+                
+                # نیا طریقہ: رزلٹ کو لائن بائی لائن پڑھ کر ورڈ فائل میں ڈالنا تاکہ فارمیٹنگ بالکل پرفیکٹ آئے
+                for line in response.text.split('\n'):
+                    if line.strip() != "":
+                        doc.add_paragraph(line)
+                    else:
+                        doc.add_paragraph() # خالی لائن کے لیے
+                        
                 doc_buffer = io.BytesIO()
                 doc.save(doc_buffer)
                 doc_buffer.seek(0)
@@ -166,7 +198,7 @@ Here is the audio file for you to process:"""
                 st.download_button(
                     label="📥 Word File (.docx) ڈاؤنلوڈ کریں",
                     data=doc_buffer,
-                    file_name="Court_Order_Processed.docx",
+                    file_name="Court_Order_Elite.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             
