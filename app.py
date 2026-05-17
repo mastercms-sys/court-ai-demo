@@ -37,7 +37,7 @@ if not st.session_state.logged_in:
 # ==========================================
 
 st.title("⚖️ Auto Court Dictation Pro")
-st.markdown("**(🧠 Deep Think / Pro Model Enabled)**")
+st.markdown("**(🧠 Deep Think Enabled with Auto-Backup)**")
 st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم گہرائی سے سوچ کر Word فائل بنا دے گا۔")
 
 # API Key
@@ -94,37 +94,24 @@ if uploaded_file is not None:
             
             with st.spinner("4️⃣ 🧠 DEEP THINK: سرور بہترین ماڈل تلاش کر کے فیصلہ ٹائپ کر رہا ہے..."):
                 
-                available_models = []
+                valid_models = []
                 try:
                     for m in genai.list_models():
                         if 'generateContent' in m.supported_generation_methods:
-                            available_models.append(m.name)
+                            name_lower = m.name.lower()
+                            # 🔴 سمارٹ فلٹر: Image، Vision اور Experimental زیرو کوٹہ ماڈلز کو نکال دیں
+                            if 'image' not in name_lower and 'vision' not in name_lower and 'exp' not in name_lower and 'learn' not in name_lower:
+                                valid_models.append(m.name)
                 except Exception as e:
                     pass
                 
-                target_model = None
+                # Pro اور Flash ماڈلز کو الگ الگ ترتیب دینا
+                pro_models = sorted([m for m in valid_models if 'pro' in m.lower()], reverse=True)
+                flash_models = sorted([m for m in valid_models if 'flash' in m.lower()], reverse=True)
                 
-                # 🔴 لائف ٹائم سمارٹ سرچ: اب یہ 1.5 یا 2.5 کی قید سے آزاد ہے، صرف 'pro' تلاش کرے گا
-                pro_models = sorted([m for m in available_models if 'pro' in m.lower()], reverse=True)
-                
-                if pro_models:
-                    target_model = pro_models[0] # سب سے لیٹسٹ Pro ماڈل
-                else:
-                    flash_models = sorted([m for m in available_models if 'flash' in m.lower()], reverse=True)
-                    if flash_models:
-                        target_model = flash_models[0] # سب سے لیٹسٹ Flash ماڈل
-                        
-                if not target_model and available_models:
-                    target_model = available_models[-1]
-                    
-                if not target_model:
-                    st.error("❌ آپ کی API Key پر کوئی AI ماڈل کام نہیں کر رہا۔")
-                    st.stop()
-                    
-                # یوزر کو سکرین پر دکھائیں گے کہ کون سا اصلی ماڈل ملا ہے
-                st.info(f"💡 Deep Think سرور استعمال کر رہا ہے: **{target_model}**")
-                
-                model = genai.GenerativeModel(target_model)
+                # مین سرور (Pro) اور بیک اپ سرور (Flash) کا انتخاب
+                primary_model_name = pro_models[0] if pro_models else (flash_models[0] if flash_models else "gemini-1.5-pro")
+                backup_model_name = flash_models[0] if flash_models else "gemini-1.5-flash"
                 
                 prompt = """Act as an Expert Legal Assistant and Senior Court Stenographer in a Pakistani District and Sessions Court.
 
@@ -146,9 +133,27 @@ Please strictly follow these instructions:
 
 Here is the audio file for you to process:"""
                 
-                response = model.generate_content([prompt, gemini_media])
+                # 🔴 ڈبل انجن سسٹم (آٹو بیک اپ لاجک)
+                try:
+                    st.info(f"💡 مین سرور استعمال ہو رہا ہے: **{primary_model_name}**")
+                    primary_model = genai.GenerativeModel(primary_model_name)
+                    response = primary_model.generate_content([prompt, gemini_media])
+                    st.success("✅ ڈکٹیشن 100% درستگی (Deep Think) کے ساتھ تیار ہو گئی!")
+                    
+                except Exception as model_error:
+                    error_msg = str(model_error)
+                    # اگر گوگل کوٹہ یا لمٹ کا ایرر دے تو فوراً بیک اپ سرور چلا دو
+                    if ("429" in error_msg or "Quota" in error_msg or "ResourceExhausted" in error_msg) and backup_model_name != primary_model_name:
+                        st.warning(f"⚠️ مین سرور بزی ہے یا فری لمٹ ختم ہے۔ آٹو بیک اپ سرور (**{backup_model_name}**) استعمال کیا جا رہا ہے تاکہ آپ کا کام نہ رکے...")
+                        try:
+                            backup_model = genai.GenerativeModel(backup_model_name)
+                            response = backup_model.generate_content([prompt, gemini_media])
+                            st.success("✅ ڈکٹیشن بیک اپ ماڈل کے ساتھ کامیابی سے تیار ہو گئی!")
+                        except Exception as backup_error:
+                            raise backup_error # اگر بیک اپ بھی فیل ہو جائے تب ایرر دے گا
+                    else:
+                        raise model_error # اگر کوئی اور ایرر ہو تو شو کرے گا
                 
-                st.success("✅ ڈکٹیشن 100% درستگی (Deep Think) کے ساتھ تیار ہو گئی!")
                 st.write(response.text)
                 
                 # 5. Word Document بنانا
@@ -161,7 +166,7 @@ Here is the audio file for you to process:"""
                 st.download_button(
                     label="📥 Word File (.docx) ڈاؤنلوڈ کریں",
                     data=doc_buffer,
-                    file_name="Court_Order_DeepThink.docx",
+                    file_name="Court_Order_Processed.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             
