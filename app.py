@@ -38,7 +38,7 @@ if not st.session_state.logged_in:
 
 st.title("⚖️ Auto Court Dictation Pro")
 st.markdown("**(🧠 Deep Think / Pro Model Enabled)**")
-st.write("اپنی ڈکٹیشن کی آڈیو یا ویڈیو فائل اپلوڈ کریں۔ سسٹم گہرائی سے سوچ کر Word فائل بنا دے گا۔")
+st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم گہرائی سے سوچ کر Word فائل بنا دے گا۔")
 
 # API Key
 try:
@@ -94,7 +94,6 @@ if uploaded_file is not None:
             
             with st.spinner("4️⃣ 🧠 DEEP THINK: سرور بہترین ماڈل تلاش کر کے فیصلہ ٹائپ کر رہا ہے..."):
                 
-                # 🔴 100% بلٹ پروف آٹو ماڈل ڈیٹیکٹر (اب 404 ایرر ناممکن ہے)
                 available_models = []
                 try:
                     for m in genai.list_models():
@@ -105,28 +104,25 @@ if uploaded_file is not None:
                 
                 target_model = None
                 
-                # 1. سب سے پہلے "Pro" (Deep Think) ڈھونڈے گا
-                pro_models = [m for m in available_models if '1.5-pro' in m.lower()]
+                # 🔴 لائف ٹائم سمارٹ سرچ: اب یہ 1.5 یا 2.5 کی قید سے آزاد ہے، صرف 'pro' تلاش کرے گا
+                pro_models = sorted([m for m in available_models if 'pro' in m.lower()], reverse=True)
                 
                 if pro_models:
-                    target_model = pro_models[0] # گوگل کا اصلی Pro ماڈل
+                    target_model = pro_models[0] # سب سے لیٹسٹ Pro ماڈل
                 else:
-                    # 2. اگر Pro نہیں ملا تو "Flash" ڈھونڈے گا
-                    flash_models = [m for m in available_models if '1.5-flash' in m.lower()]
-                    
+                    flash_models = sorted([m for m in available_models if 'flash' in m.lower()], reverse=True)
                     if flash_models:
-                        target_model = flash_models[0] # گوگل کا اصلی Flash ماڈل
+                        target_model = flash_models[0] # سب سے لیٹسٹ Flash ماڈل
                         
-                # 3. اگر دونوں نہ ملے تو جو بھی لیٹسٹ ماڈل لسٹ میں ہو وہ اٹھا لے گا
                 if not target_model and available_models:
-                    target_model = available_models[0]
+                    target_model = available_models[-1]
                     
                 if not target_model:
-                    st.error("❌ آپ کی API Key پر کوئی AI ماڈل کام نہیں کر رہا۔ براہ کرم نئی API Key استعمال کریں۔")
+                    st.error("❌ آپ کی API Key پر کوئی AI ماڈل کام نہیں کر رہا۔")
                     st.stop()
                     
                 # یوزر کو سکرین پر دکھائیں گے کہ کون سا اصلی ماڈل ملا ہے
-                st.info(f"💡 سمارٹ ڈیٹیکٹر نے یہ ماڈل استعمال کیا ہے: **{target_model}**")
+                st.info(f"💡 Deep Think سرور استعمال کر رہا ہے: **{target_model}**")
                 
                 model = genai.GenerativeModel(target_model)
                 
@@ -175,8 +171,6 @@ Here is the audio file for you to process:"""
             st.error(f"کوئی مسئلہ پیش آیا: {e}")
             with st.expander("تکنیکی خرابی کی تفصیل (ایرر آئے تو یہ دیکھیں)"):
                 st.write(e)
-                if 'available_models' in locals():
-                    st.write("آپ کی API Key پر گوگل کی طرف سے دستیاب ماڈلز کی مکمل لسٹ:", available_models)
             
         finally:
             if os.path.exists(temp_media_path):
