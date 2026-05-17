@@ -8,11 +8,39 @@ import time
 import subprocess
 
 # پیج کی سیٹنگ
-st.set_page_config(page_title="Court Dictation AI", page_icon="⚖️", layout="centered")
-st.title("⚖️ Auto Court Dictation Pro")
-st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم خود اسے ٹھیک کر کے  فائل بنا دے گا۔")
+st.set_page_config(page_title="Court Dictation AI - Deep Think", page_icon="⚖️", layout="centered")
 
-# API Key کو خفیہ خانے سے لانا
+# ==========================================
+# 🔒 لاگ ان سسٹم (Monthly Subscription Lock)
+# ==========================================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.markdown("<h1 style='text-align: center;'>🔒 Court Dictation Pro</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>براہ کرم اپنا ماہانہ پاس ورڈ درج کریں۔</p>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        password_input = st.text_input("پاس ورڈ (Password):", type="password")
+        if st.button("لاگ ان (Login)", use_container_width=True):
+            try:
+                correct_password = st.secrets["APP_PASSWORD"]
+                if password_input == correct_password:
+                    st.session_state.logged_in = True
+                    st.rerun()
+                else:
+                    st.error("❌ غلط پاس ورڈ! رسائی کے لیے ایڈمن سے رابطہ کریں۔")
+            except Exception as e:
+                st.error("⚠️ ایپ کے بیک اینڈ پر پاس ورڈ سیٹ نہیں ہے۔")
+    st.stop()
+# ==========================================
+
+st.title("⚖️ Auto Court Dictation Pro")
+st.markdown("**(🧠 Deep Think / Pro Model Enabled)**")
+st.write("اپنی ڈکٹیشن کی آڈیو یا ویڈیو فائل اپلوڈ کریں۔ سسٹم گہرائی سے سوچ کر Word فائل بنا دے گا۔")
+
+# API Key
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
@@ -27,8 +55,6 @@ if uploaded_file is not None:
     if st.button("Generate Court Document"):
         
         file_extension = os.path.splitext(uploaded_file.name)[1].lower()
-        
-        # اصلی اپلوڈ شدہ فائل محفوظ کریں
         temp_media = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
         temp_media.write(uploaded_file.getbuffer())
         temp_media.close()
@@ -37,8 +63,7 @@ if uploaded_file is not None:
         clean_audio_path = None
         
         try:
-            # 1. ڈائریکٹ سرور کمانڈ کے ذریعے آٹو کنورٹر 
-            with st.spinner("1️⃣ سسٹم آپ کی فائل کو آٹو فکس کر کے MP3 بنا رہا ہے..."):
+            with st.spinner("1️⃣ سسٹم آپ کی فائل کو آٹو فکس کر رہا ہے (بیک گراؤنڈ پروسیسنگ)..."):
                 clean_audio = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
                 clean_audio.close()
                 clean_audio_path = clean_audio.name
@@ -54,11 +79,9 @@ if uploaded_file is not None:
                     st.error("❌ فائل کنورٹ نہیں ہو سکی۔ یہ فائل مکمل کرپٹ ہے۔")
                     st.stop()
 
-            # 2. صاف MP3 فائل گوگل کو بھیجیں گے
-            with st.spinner("2️⃣ صاف کی گئی فائل سرور پر اپلوڈ ہو رہی ہے..."):
+            with st.spinner("2️⃣ فائل گوگل کے سب سے طاقتور سرور پر اپلوڈ ہو رہی ہے..."):
                 gemini_media = genai.upload_file(path=clean_audio_path, mime_type="audio/mp3")
             
-            # 3. پکا انتظار
             with st.spinner("3️⃣ AI سرور آواز کو سمجھ رہا ہے، براہ کرم انتظار کریں..."):
                 while gemini_media.state.name == 'PROCESSING':
                     time.sleep(5)
@@ -69,81 +92,43 @@ if uploaded_file is not None:
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
-            # 4. قانونی ہدایت اور آٹو ماڈل سلیکشن
-            with st.spinner("4️⃣ سرور عدالتی فیصلہ ٹائپ کر رہا ہے..."):
+            # 🔴 یہاں ہم نے ایپ کو "Deep Think" (Pro Model) پر شفٹ کر دیا ہے
+            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور گہرائی سے تجزیہ کر کے فیصلہ ٹائپ کر رہا ہے (اس میں تھوڑا زیادہ وقت لگ سکتا ہے)..."):
                 
-                target_model = None
-                available_models = []
+                # گوگل کا سب سے ذہین اور Deep Think ماڈل (Pro)
+                target_model = "gemini-1.5-pro"
                 
-                try:
-                    for m in genai.list_models():
-                        if 'generateContent' in m.supported_generation_methods:
-                            available_models.append(m.name)
-                except Exception:
-                    pass
-                        
-                for m_name in available_models:
-                    if '1.5-flash' in m_name:
-                        target_model = m_name
-                        break
-                        
-                if not target_model:
-                    for m_name in available_models:
-                        if '1.5-pro' in m_name:
-                            target_model = m_name
-                            break
-                            
-                if not target_model and available_models:
-                    target_model = available_models[0]
-                    
-                if not target_model:
-                    st.error("❌ آپ کی API Key پر کوئی بھی AI ماڈل دستیاب نہیں ہے۔")
-                    st.stop()
+                # اگر کسی وجہ سے Pro ماڈل دستیاب نہ ہو تو متبادل کا آپشن
+                available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                if not any('1.5-pro' in m for m in available_models):
+                    target_model = "gemini-1.5-flash"
+                    st.warning("⚠️ Deep Think (Pro) ماڈل اس وقت دستیاب نہیں ہے، تیز ماڈل استعمال کیا جا رہا ہے۔")
                 
                 model = genai.GenerativeModel(target_model)
                 
-                # 🔴 آپ کا دیا گیا بہترین اور پروفیشنل پرامپٹ (تھوڑی سی موڈیفکیشن کے ساتھ)
-                prompt = """Act as an Expert Legal Drafter and Senior Court Stenographer in a Pakistani District and Sessions Court. 
+                prompt = """Act as an Expert Legal Assistant and Senior Court Stenographer in a Pakistani District and Sessions Court.
 
-I will provide you with a raw audio transcript or rough dictation of court proceedings. Your task is to process, edit, and highly format this text into a flawless, ready-to-print Court Order or Judgment. 
+I will provide you with an audio dictation of court proceedings. Your task is to process, edit, and format this audio into a flawless, highly professional Court Order or Judgment.
 
-You MUST strictly adhere to the following 5 rules:
+Please strictly follow these instructions:
 
-1. CURRENCY & NUMBER FORMATTING (CRITICAL): 
-   - Never write amounts in words (e.g., "Rupees 55 Lakh", "Rupees 10000"). 
-   - Always convert amounts to the standard Pakistani legal numeric format with commas and a trailing dash. Example: "Rs. 5,500,000/-", "Rs. 10,000/-", "Rs. 500,000/-".
+1. CLEAN UP THE TEXT: Remove all hesitations, stutters, false starts, filler sounds (e.g., 'umm', 'uh'), and informal conversational words (e.g., 'yar', 'acha', 'theek').
+2. PERFECT GRAMMAR & TONE: Correct all English grammar, sentence structures, and punctuation perfectly. Maintain a highly formal, objective, and judicial tone.
+3. PRESERVE PAKISTANI LEGAL CONTEXT: Retain, correctly spell, and properly capitalize Pakistani legal and local terms (e.g., FIR, PPC, CrPC, IO, SHO, ADPP, Plaint, Nikahnama, Iddat, Panchayat, OPP, OPD, PW, DW). DO NOT change any core facts, dates, names, or amounts.
+4. PROFESSIONAL FORMATTING:
+   - Separate multiple cases clearly.
+   - Use proper paragraph breaks for readability.
+   - Use BOLD and ALL CAPS for main headings (e.g., **ORDER**, **JUDGMENT**).
+   - For criminal cases, neatly format the header (e.g., **TITLE:**, **FIR NO.:**, **OFFENCES:**, **POLICE STATION:**).
+   - For civil/family cases, boldly format the issues (e.g., **ISSUE NO. 1 (OPP):**, **ISSUE NO. 2 (OPD):**).
+5. STRICT OUTPUT CONSTRAINT: Output ONLY the final, clean, formatted English legal document. Do not include any conversational AI filler, greetings, introductory remarks, or concluding statements.
+6. NO EXTRA HEADERS/FOOTERS: DO NOT add "In the Court of", Judge names, Dates, Signatures, or Stamps at the top or bottom UNLESS explicitly spoken in the audio dictation.
 
-2. ELIMINATE DICTATION ARTIFACTS: 
-   - Remove all hesitations, stutters, and informal words (e.g., 'umm', 'uh', 'yar', 'acha').
-   - STRICTLY remove the repetitive use of the word "That" at the beginning of every sentence or paragraph (a common dictation habit). Start sentences directly to ensure a natural, professional flow.
-
-3. CORRECT LEGAL CONTEXT & TITLES: 
-   - Correctly translate local terms if used as parties: change "Sarkar" to "THE STATE".
-   - Do not mistake application types for party names. If the dictation says "Imam Bakhsh vs Execution", infer the context and format the title properly as "TITLE: IMAM BAKHSH VS. JUDGMENT DEBTOR" and add "NATURE: EXECUTION PETITION" below it.
-   - Retain and properly capitalize Pakistani land and legal terms (e.g., Khata, Killa, Marla, Kanal, Patwari Halqa, FIR, PPC, CrPC, IO, SHO, ADPP, OPP, OPD, PW, DW).
-
-4. PERFECT GRAMMAR & TENSES: 
-   - Fix mixed tenses within a single sentence. (e.g., Change "Patwari Halqa is present and submitted" to "The Patwari Halqa is present in Court and submits"). Ensure a highly formal, objective, and judicial tone.
-
-5. PROFESSIONAL LAYOUT & HEADINGS:
-   - Separate multiple cases clearly using a divider `***`.
-   - Use bold and uppercase for main headers. Follow this exact structure for every case:
-     **CASE NO. [Number]**
-     **TITLE:** [Party A] VS. [Party B]
-     **ORDER** (or **JUDGMENT**)
-     [Body of the order in well-structured paragraphs]
-     **ISSUE NO. 1 (OPP):** [Text]
-     **RELIEF:** [Text]
-
-STRICT OUTPUT CONSTRAINT: 
-Output ONLY the final, clean, formatted English legal document. Do not include any conversational AI filler, greetings, or concluding statements.
-
-Here is the raw text to process:
-{{RAW_TEXT}}"""
+Here is the audio file for you to process:"""
                 
                 response = model.generate_content([prompt, gemini_media])
                 
-                st.success("✅ ڈکٹیشن کامیابی سے تیار ہو گئی!")
+                st.success("✅ ڈکٹیشن 100% درستگی (Deep Think) کے ساتھ تیار ہو گئی!")
                 st.write(response.text)
                 
                 # 5. Word Document بنانا
@@ -156,11 +141,10 @@ Here is the raw text to process:
                 st.download_button(
                     label="📥 Word File (.docx) ڈاؤنلوڈ کریں",
                     data=doc_buffer,
-                    file_name="Court_Order.docx",
+                    file_name="Court_Order_Pro.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             
-            # زیرو سٹوریج: گوگل سرور سے آڈیو ڈیلیٹ کرنا
             genai.delete_file(gemini_media.name)
             
         except Exception as e:
@@ -169,7 +153,6 @@ Here is the raw text to process:
                 st.write(e)
             
         finally:
-            # زیرو سٹوریج: اپنے لوکل سرور سے دونوں عارضی فائلیں ڈیلیٹ کرنا
             if os.path.exists(temp_media_path):
                 os.remove(temp_media_path)
             if clean_audio_path and os.path.exists(clean_audio_path):
