@@ -6,9 +6,10 @@ import tempfile
 import os
 import time
 import subprocess
+import re  # نیا ٹول: AI کے جواب کو الگ الگ کرنے کے لیے (Regex)
 
 # پیج کی سیٹنگ
-st.set_page_config(page_title="Court Dictation AI - Elite Drafter", page_icon="⚖️", layout="centered")
+st.set_page_config(page_title="Court Dictation AI - Deep Think", page_icon="⚖️", layout="centered")
 
 # ==========================================
 # 🔒 لاگ ان سسٹم (Monthly Subscription Lock)
@@ -37,7 +38,7 @@ if not st.session_state.logged_in:
 # ==========================================
 
 st.title("⚖️ Auto Court Dictation Pro")
-st.markdown("**(🧠 Deep Legal Thinker & Elite Drafter Enabled)**")
+st.markdown("**(🧠 Deep Legal Thinker Enabled)**")
 st.write("اپنی ڈکٹیشن کی آڈیو، ویڈیو یا واٹس ایپ فائل اپلوڈ کریں۔ سسٹم گہرائی سے سوچ کر Word فائل بنا دے گا۔")
 
 # API Key
@@ -92,7 +93,7 @@ if uploaded_file is not None:
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
-            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور قانونی گہرائی کے ساتھ فیصلہ ڈرافٹ کر رہا ہے..."):
+            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور منطقی غلطیاں ڈھونڈ کر فیصلہ ڈرافٹ کر رہا ہے..."):
                 
                 valid_models = []
                 try:
@@ -110,61 +111,55 @@ if uploaded_file is not None:
                 primary_model_name = pro_models[0] if pro_models else (flash_models[0] if flash_models else "gemini-1.5-pro")
                 backup_model_name = flash_models[0] if flash_models else "gemini-1.5-flash"
                 
-                # 🔴 آپ کا الٹرا لیول پرامپٹ (Deep Legal Thinking)
-                prompt = """Act as an Elite Legal Drafter and Senior District & Sessions Judge in Pakistan. 
+                # 🔴 آپ کا Chain of Thought ماسٹر پرامپٹ
+                prompt = """Act as an Elite Legal Assistant and Senior District Court Judge in Pakistan.
 
-I will provide you with a raw, unedited audio recording of court dictations. Your task is to apply "Deep Legal Thinking" to listen, process, refine, logically correct, and highly format this audio into a flawless, ready-to-print Court Order or Judgment.
+I will provide you with a raw, unedited audio transcript of court proceedings. Your task is to act as a "Deep Thinking" AI. You must carefully analyze the text, fix logical errors, remove dictation repetitions, correct the grammar, and format it into a flawless, ready-to-print Court Order.
 
-You MUST strictly adhere to the following 5 golden rules:
+Follow these STRICT RULES:
 
-1. NO MARKDOWN OR SPECIAL CHARACTERS (CRITICAL FOR MS WORD):
-   - ABSOLUTELY DO NOT use asterisks (**), hashes (#), or quotation marks ("") for bolding or formatting. 
-   - Since the output will be pasted directly into MS Word as plain text, use purely ALL CAPS to emphasize headings. 
-   - Example: Write exactly ORDER instead of "**ORDER**" or "ORDER". Write exactly ISSUE NO. 1 (OPP): instead of "**ISSUE NO. 1 (OPP):**".
+1. LOGICAL CORRECTIONS (DEEP THINK):
+   - Fix dictation slips of the tongue. For example, if the text says "being sons... they are Parda Nashin ladies", use logic to correct it to "being daughters, they are Parda Nashin ladies".
+   - Identify and REMOVE exact repetitions. If the speaker stuttered and repeated a sentence (e.g., "defendants are in possession... defendants are in possession"), write it ONLY ONCE.
 
-2. LOGICAL CORRECTIONS & ELIMINATING REPETITIONS (DEEP THINK):
-   - Think deeply and analyze the context. Correct obvious slips of the tongue by the dictator. (e.g., if the audio says "sons are Parda Nashin ladies", apply logic and correct it to "daughters are Parda Nashin ladies" based on context).
-   - If the dictator accidentally repeats a sentence twice (e.g., "The defendants are co-sharers. The defendants are co-sharers."), deeply analyze and write it ONLY ONCE in the final text.
-   - Ensure the gender of the parties (he/she/her/his) and singular/plural nouns remain logically consistent throughout the case.
+2. LEGAL VOCABULARY & GRAMMAR:
+   - Always translate "Sarkar" to "THE STATE" in the title.
+   - Fix Urdu-to-English literal translations: 
+     Change "interfere into" to "interfere with". 
+     Change "deprive from" to "deprive of". 
+     Change "succeeded to" to "succeeded in".
+   - Fix dictation mishears: Change "Arguments are record perused" to exactly "Arguments heard. Record perused." (Put this on a separate line).
+   - Remove the word "That" at the beginning of paragraphs to ensure a formal, objective judicial flow.
 
-3. PERFECT LEGAL GRAMMAR & FLOW:
-   - Fix literal Urdu-to-English translation errors. ALWAYS change "interfere into the possession" to "interfere with the possession".
-   - ALWAYS change "deprived from" to "deprived of".
-   - Always use proper articles (e.g., write "The plaintiff" instead of just "Plaintiff").
-   - Remove the repetitive word "That" at the start of every sentence. Merge choppy sentences to create a smooth, highly formal, and objective judicial tone.
+3. NUMBERS AND CURRENCY:
+   - Convert amounts to numeric format with commas and a dash (e.g., "Rs. 5,000,000/-" instead of "Rupees 50 Lakh" or "5000000").
 
-4. EXACT NUMBERS & ISSUE FORMATTING:
-   - Convert spoken amounts into legal numeric formats with commas and a dash. Do not write "Rupees 50 Lakh" or "50000". Write: "Rs. 5,000,000/-" and "Rs. 50,000/-".
-   - Do NOT repeat the burden of proof tag at the end of an issue. If the heading says "ISSUE NO. 1 (OPP):", do not put "(OPP)" again at the end of the sentence.
+4. MS WORD READY FORMATTING (NO MARKDOWN OR QUOTES):
+   - DO NOT use markdown symbols like asterisks (**) or hashes (#) or quotation marks ("") for bolding or headings. 
+   - Use ONLY ALL CAPS for emphasis (e.g., type exactly CASE NO., TITLE, ORDER, ISSUES).
+   - Separate multiple cases with a line: ----------------------------------------
+   - Keep (OPP) or (OPD) in the Issue heading. Example: ISSUE NO. 1 (OPP): [Text]
 
-5. EXACT LAYOUT STRUCTURE:
-   - Separate different cases using a plain line of dashes: ----------------------------------------
-   - Format each case exactly like this:
-   
-   CASE NO. [Leave Blank if not provided]
-   TITLE: [Party A] VS. [Party B]
-   
-   ORDER 
-   [Clean, logically flowing paragraphs]
-   
-   ISSUES:
-   ISSUE NO. 1 (OPP): [Text ends with a question mark]
-   ISSUE NO. 2 (OPD): [Text ends with a question mark]
-   
-   RELIEF: 
-   To come up for preliminary arguments on [Date].
+TO ENSURE DEEP THINKING, YOU MUST FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 
-STRICT OUTPUT CONSTRAINT:
-Output ONLY the final, cleanly formatted legal document. No introductory or concluding remarks from the AI. Do not output your internal thinking process.
+<thinking>
+1. (Briefly list the logical errors, repetitions, and grammar mistakes you found in the raw text).
+2. (State how you will fix them based on the rules).
+</thinking>
 
-Here is the audio file to process:"""
+<court_order>
+(Provide the final, perfectly formatted plain-text document here. DO NOT use ** or "" symbols).
+</court_order>
+
+RAW AUDIO TO PROCESS:"""
+                
+                full_text = ""
                 
                 try:
-                    st.info(f"💡 Elite Drafter Engine: **{primary_model_name}**")
+                    st.info(f"💡 Deep Think Engine: **{primary_model_name}**")
                     primary_model = genai.GenerativeModel(primary_model_name)
                     response = primary_model.generate_content([prompt, gemini_media])
-                    st.success("✅ ڈکٹیشن 100% درستگی (Deep Legal Think) کے ساتھ تیار ہو گئی!")
-                    
+                    full_text = response.text
                 except Exception as model_error:
                     error_msg = str(model_error)
                     if ("429" in error_msg or "Quota" in error_msg or "ResourceExhausted" in error_msg) and backup_model_name != primary_model_name:
@@ -172,24 +167,44 @@ Here is the audio file to process:"""
                         try:
                             backup_model = genai.GenerativeModel(backup_model_name)
                             response = backup_model.generate_content([prompt, gemini_media])
-                            st.success("✅ ڈکٹیشن بیک اپ ماڈل کے ساتھ کامیابی سے تیار ہو گئی!")
+                            full_text = response.text
                         except Exception as backup_error:
                             raise backup_error
                     else:
                         raise model_error
                 
-                # نیا طریقہ: سکرین پر دکھانے کے لیے Text Area کا استعمال، تاکہ مارک ڈاؤن کا مسئلہ نہ ہو اور یوزر آسانی سے کاپی کر سکے
-                st.text_area("تیار شدہ عدالتی فیصلہ (یہاں سے سلیکٹ کر کے کاپی بھی کر سکتے ہیں):", response.text, height=450)
+                # 🔴 سمارٹ فلٹر (Regex) جو <thinking> اور <court_order> کو الگ کرے گا
+                thinking_match = re.search(r'<thinking>(.*?)</thinking>', full_text, re.DOTALL | re.IGNORECASE)
+                order_match = re.search(r'<court_order>(.*?)</court_order>', full_text, re.DOTALL | re.IGNORECASE)
                 
-                # 5. Word Document بنانا
+                thinking_text = thinking_match.group(1).strip() if thinking_match else ""
+                
+                if order_match:
+                    final_order_text = order_match.group(1).strip()
+                else:
+                    # اگر ماڈل غلطی سے ٹیگ لگانا بھول جائے تو thinking والے حصے کو کاٹ کر باقی سب لے لو
+                    final_order_text = full_text
+                    if thinking_match:
+                        final_order_text = re.sub(r'<thinking>.*?</thinking>', '', final_order_text, flags=re.DOTALL | re.IGNORECASE).strip()
+                    final_order_text = final_order_text.replace('<court_order>', '').replace('</court_order>', '').strip()
+                
+                st.success("✅ ڈکٹیشن 100% درستگی (Deep Legal Think) کے ساتھ تیار ہو گئی!")
+                
+                # 1. یوزر کو حیران کرنے کے لیے AI کا "سوچنے کا عمل" ایک خانے میں دکھائیں
+                if thinking_text:
+                    with st.expander("🧠 AI کا تجزیہ (دیکھیں سسٹم نے کیا غلطیاں پکڑیں اور کیسے ٹھیک کیں)"):
+                        st.write(thinking_text)
+                
+                # 2. مین ٹیکسٹ ایریا میں صرف صاف فیصلہ دکھائیں
+                st.text_area("تیار شدہ عدالتی فیصلہ (یہاں سے سلیکٹ کر کے کاپی بھی کر سکتے ہیں):", final_order_text, height=450)
+                
+                # 3. Word Document بنانا (جس میں صرف فیصلہ ہوگا، سوچ نہیں ہوگی)
                 doc = Document()
-                
-                # نیا طریقہ: رزلٹ کو لائن بائی لائن پڑھ کر ورڈ فائل میں ڈالنا تاکہ فارمیٹنگ بالکل پرفیکٹ آئے
-                for line in response.text.split('\n'):
+                for line in final_order_text.split('\n'):
                     if line.strip() != "":
                         doc.add_paragraph(line)
                     else:
-                        doc.add_paragraph() # خالی لائن کے لیے
+                        doc.add_paragraph()
                         
                 doc_buffer = io.BytesIO()
                 doc.save(doc_buffer)
@@ -198,7 +213,7 @@ Here is the audio file to process:"""
                 st.download_button(
                     label="📥 Word File (.docx) ڈاؤنلوڈ کریں",
                     data=doc_buffer,
-                    file_name="Court_Order_Elite.docx",
+                    file_name="Court_Order_Pro.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             
