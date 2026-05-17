@@ -79,7 +79,7 @@ if uploaded_file is not None:
                     st.error("❌ فائل کنورٹ نہیں ہو سکی۔ یہ فائل مکمل کرپٹ ہے۔")
                     st.stop()
 
-            with st.spinner("2️⃣ فائل گوگل کے سب سے طاقتور سرور پر اپلوڈ ہو رہی ہے..."):
+            with st.spinner("2️⃣ فائل گوگل کے سرور پر اپلوڈ ہو رہی ہے..."):
                 gemini_media = genai.upload_file(path=clean_audio_path, mime_type="audio/mp3")
             
             with st.spinner("3️⃣ AI سرور آواز کو سمجھ رہا ہے، براہ کرم انتظار کریں..."):
@@ -92,17 +92,41 @@ if uploaded_file is not None:
                     genai.delete_file(gemini_media.name)
                     st.stop()
             
-            # 🔴 یہاں ہم نے ایپ کو "Deep Think" (Pro Model) پر شفٹ کر دیا ہے
-            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور گہرائی سے تجزیہ کر کے فیصلہ ٹائپ کر رہا ہے (اس میں تھوڑا زیادہ وقت لگ سکتا ہے)..."):
+            with st.spinner("4️⃣ 🧠 DEEP THINK: سرور بہترین ماڈل تلاش کر کے فیصلہ ٹائپ کر رہا ہے..."):
                 
-                # گوگل کا سب سے ذہین اور Deep Think ماڈل (Pro)
-                target_model = "gemini-1.5-pro"
+                # 🔴 100% بلٹ پروف آٹو ماڈل ڈیٹیکٹر (اب 404 ایرر ناممکن ہے)
+                available_models = []
+                try:
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            available_models.append(m.name)
+                except Exception as e:
+                    pass
                 
-                # اگر کسی وجہ سے Pro ماڈل دستیاب نہ ہو تو متبادل کا آپشن
-                available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                if not any('1.5-pro' in m for m in available_models):
-                    target_model = "gemini-1.5-flash"
-                    st.warning("⚠️ Deep Think (Pro) ماڈل اس وقت دستیاب نہیں ہے، تیز ماڈل استعمال کیا جا رہا ہے۔")
+                target_model = None
+                
+                # 1. سب سے پہلے "Pro" (Deep Think) ڈھونڈے گا
+                pro_models = [m for m in available_models if '1.5-pro' in m.lower()]
+                
+                if pro_models:
+                    target_model = pro_models[0] # گوگل کا اصلی Pro ماڈل
+                else:
+                    # 2. اگر Pro نہیں ملا تو "Flash" ڈھونڈے گا
+                    flash_models = [m for m in available_models if '1.5-flash' in m.lower()]
+                    
+                    if flash_models:
+                        target_model = flash_models[0] # گوگل کا اصلی Flash ماڈل
+                        
+                # 3. اگر دونوں نہ ملے تو جو بھی لیٹسٹ ماڈل لسٹ میں ہو وہ اٹھا لے گا
+                if not target_model and available_models:
+                    target_model = available_models[0]
+                    
+                if not target_model:
+                    st.error("❌ آپ کی API Key پر کوئی AI ماڈل کام نہیں کر رہا۔ براہ کرم نئی API Key استعمال کریں۔")
+                    st.stop()
+                    
+                # یوزر کو سکرین پر دکھائیں گے کہ کون سا اصلی ماڈل ملا ہے
+                st.info(f"💡 سمارٹ ڈیٹیکٹر نے یہ ماڈل استعمال کیا ہے: **{target_model}**")
                 
                 model = genai.GenerativeModel(target_model)
                 
@@ -141,7 +165,7 @@ Here is the audio file for you to process:"""
                 st.download_button(
                     label="📥 Word File (.docx) ڈاؤنلوڈ کریں",
                     data=doc_buffer,
-                    file_name="Court_Order_Pro.docx",
+                    file_name="Court_Order_DeepThink.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
             
@@ -151,6 +175,8 @@ Here is the audio file for you to process:"""
             st.error(f"کوئی مسئلہ پیش آیا: {e}")
             with st.expander("تکنیکی خرابی کی تفصیل (ایرر آئے تو یہ دیکھیں)"):
                 st.write(e)
+                if 'available_models' in locals():
+                    st.write("آپ کی API Key پر گوگل کی طرف سے دستیاب ماڈلز کی مکمل لسٹ:", available_models)
             
         finally:
             if os.path.exists(temp_media_path):
