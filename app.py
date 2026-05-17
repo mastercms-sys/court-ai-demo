@@ -103,25 +103,43 @@ if uploaded_file is not None:
                 model = genai.GenerativeModel(target_model)
                 
                 # 🔴 آپ کا دیا گیا بہترین اور پروفیشنل پرامپٹ (تھوڑی سی موڈیفکیشن کے ساتھ)
-                prompt = """Act as an Expert Legal Assistant and Senior Court Stenographer in a Pakistani District and Sessions Court.
+                prompt = """Act as an Expert Legal Drafter and Senior Court Stenographer in a Pakistani District and Sessions Court. 
 
-I will provide you with an audio dictation of court proceedings. Your task is to process, edit, and format this audio into a flawless, highly professional Court Order or Judgment.
+I will provide you with a raw audio transcript or rough dictation of court proceedings. Your task is to process, edit, and highly format this text into a flawless, ready-to-print Court Order or Judgment. 
 
-Please strictly follow these instructions:
+You MUST strictly adhere to the following 5 rules:
 
-1. CLEAN UP THE TEXT: Remove all hesitations, stutters, false starts, filler sounds (e.g., 'umm', 'uh'), and informal conversational words (e.g., 'yar', 'acha', 'theek').
-2. PERFECT GRAMMAR & TONE: Correct all English grammar, sentence structures, and punctuation perfectly. Maintain a highly formal, objective, and judicial tone.
-3. PRESERVE PAKISTANI LEGAL CONTEXT: Retain, correctly spell, and properly capitalize Pakistani legal and local terms (e.g., FIR, PPC, CrPC, IO, SHO, ADPP, Plaint, Nikahnama, Iddat, Panchayat, OPP, OPD, PW, DW). DO NOT change any core facts, dates, names, or amounts.
-4. PROFESSIONAL FORMATTING:
-   - Separate multiple cases clearly.
-   - Use proper paragraph breaks for readability.
-   - Use BOLD and ALL CAPS for main headings (e.g., **ORDER**, **JUDGMENT**).
-   - For criminal cases, neatly format the header (e.g., **TITLE:**, **FIR NO.:**, **OFFENCES:**, **POLICE STATION:**).
-   - For civil/family cases, boldly format the issues (e.g., **ISSUE NO. 1 (OPP):**, **ISSUE NO. 2 (OPD):**).
-5. STRICT OUTPUT CONSTRAINT: Output ONLY the final, clean, formatted English legal document. Do not include any conversational AI filler, greetings, introductory remarks, or concluding statements (e.g., never say "Here is the formatted document").
-6. NO EXTRA HEADERS/FOOTERS: DO NOT add "In the Court of", Judge names, Dates, Signatures, or Stamps at the top or bottom UNLESS explicitly spoken in the audio dictation.
+1. CURRENCY & NUMBER FORMATTING (CRITICAL): 
+   - Never write amounts in words (e.g., "Rupees 55 Lakh", "Rupees 10000"). 
+   - Always convert amounts to the standard Pakistani legal numeric format with commas and a trailing dash. Example: "Rs. 5,500,000/-", "Rs. 10,000/-", "Rs. 500,000/-".
 
-Here is the audio file for you to process:"""
+2. ELIMINATE DICTATION ARTIFACTS: 
+   - Remove all hesitations, stutters, and informal words (e.g., 'umm', 'uh', 'yar', 'acha').
+   - STRICTLY remove the repetitive use of the word "That" at the beginning of every sentence or paragraph (a common dictation habit). Start sentences directly to ensure a natural, professional flow.
+
+3. CORRECT LEGAL CONTEXT & TITLES: 
+   - Correctly translate local terms if used as parties: change "Sarkar" to "THE STATE".
+   - Do not mistake application types for party names. If the dictation says "Imam Bakhsh vs Execution", infer the context and format the title properly as "TITLE: IMAM BAKHSH VS. JUDGMENT DEBTOR" and add "NATURE: EXECUTION PETITION" below it.
+   - Retain and properly capitalize Pakistani land and legal terms (e.g., Khata, Killa, Marla, Kanal, Patwari Halqa, FIR, PPC, CrPC, IO, SHO, ADPP, OPP, OPD, PW, DW).
+
+4. PERFECT GRAMMAR & TENSES: 
+   - Fix mixed tenses within a single sentence. (e.g., Change "Patwari Halqa is present and submitted" to "The Patwari Halqa is present in Court and submits"). Ensure a highly formal, objective, and judicial tone.
+
+5. PROFESSIONAL LAYOUT & HEADINGS:
+   - Separate multiple cases clearly using a divider `***`.
+   - Use bold and uppercase for main headers. Follow this exact structure for every case:
+     **CASE NO. [Number]**
+     **TITLE:** [Party A] VS. [Party B]
+     **ORDER** (or **JUDGMENT**)
+     [Body of the order in well-structured paragraphs]
+     **ISSUE NO. 1 (OPP):** [Text]
+     **RELIEF:** [Text]
+
+STRICT OUTPUT CONSTRAINT: 
+Output ONLY the final, clean, formatted English legal document. Do not include any conversational AI filler, greetings, or concluding statements.
+
+Here is the raw text to process:
+{{RAW_TEXT}}"""
                 
                 response = model.generate_content([prompt, gemini_media])
                 
